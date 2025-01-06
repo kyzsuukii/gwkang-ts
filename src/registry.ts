@@ -1,16 +1,16 @@
-import { rateLimit } from './middleware/rateLimit';
-import { pingCommand } from './commands/ping';
-import { startCommand } from './commands/start';
-import { MiddlewareHandler } from './core/types';
+import rateLimit from './middleware/rateLimit';
+import ping from './commands/ping';
+import start from './commands/start';
+import * as T from './core/types';
 import { Command } from './utils/command';
 
-export const middlewares: MiddlewareHandler[] = [
-  rateLimit,
+export const middlewares: T.MiddlewareHandler[] = [
+  rateLimit(),
   // Add more middlewares here
 ];
 
 export const commands: Command[] = [
-  pingCommand,
-  startCommand,
+  ping(),
+  start(),
   // Add more commands here
 ];

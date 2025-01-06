@@ -1,4 +1,4 @@
-import { Bot, Context } from 'grammy';
+import { Telegraf } from 'telegraf';
 import { CommandOptions, CommandHandler } from '../core';
 
 export class Command {
@@ -12,7 +12,7 @@ export class Command {
     return new Command(options.name, options.description, handler);
   }
 
-  register(bot: Bot<Context>) {
+  register(bot: Telegraf) {
     bot.command(this.name, this.handler);
   }
 }

@@ -1,27 +1,25 @@
-import { Bot, BotError, Context } from 'grammy';
+import { Telegraf } from 'telegraf';
 import { config } from '../utils/config';
 import { Database } from './database';
 import { middlewares, commands } from '../registry';
-import { getEmptyKeys } from '../utils/validation';
 import { logger } from '../utils/logger';
 import { GwKangOptions } from './types';
 
 export class GwKang {
-  private bot: Bot<Context>;
+  private bot: Telegraf;
   private db: Database;
   private options: GwKangOptions;
 
   constructor(options: GwKangOptions = {}) {
     this.options = options;
-    this.validateConfig();
-    this.bot = new Bot<Context>(config.BOT_TOKEN as string, options.bot);
+    this.bot = new Telegraf(config.BOT_TOKEN, options.bot);
     this.db = Database.getInstance();
   }
 
   private async setupCommands(): Promise<void> {
     if (this.options.setMyCommands) {
       try {
-        await this.bot.api.setMyCommands(
+        await this.bot.telegram.setMyCommands(
           commands.map(cmd => ({
             command: cmd.name,
             description: cmd.description,
@@ -32,7 +30,6 @@ export class GwKang {
         logger.warn(
           'Failed to register bot commands with Telegram API. auto-completion will not work'
         );
-
         // continue even if the command registration fails
       }
     }
@@ -49,24 +46,11 @@ export class GwKang {
     logger.info('Successfully established database connection');
   }
 
-  async initialize(): Promise<Bot<Context>> {
+  async initialize(): Promise<Telegraf> {
     await this.initializeDatabase();
     await this.setupMiddlewares();
     await this.setupCommands();
     logger.info('Bot initialization completed. waiting until bot is started...');
     return this.bot;
-  }
-
-  private validateConfig(): void {
-    const emptyKeys = getEmptyKeys(config);
-    if (emptyKeys.length > 0) {
-      const error = `Required environment variables missing: ${emptyKeys.join(', ')}`;
-      logger.error(error);
-      throw new Error(error);
-    }
-  }
-
-  getDatabase(): Database {
-    return this.db;
   }
 }

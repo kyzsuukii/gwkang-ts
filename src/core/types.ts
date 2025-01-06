@@ -1,4 +1,5 @@
-import { Context, Middleware, CommandMiddleware, BotConfig } from 'grammy';
+import { Context, Middleware, Telegraf } from 'telegraf';
+import { Update } from 'telegraf/typings/core/types/typegram';
 
 /**
  * Generic configuration type that enforces string or undefined values
@@ -18,17 +19,17 @@ export interface CommandOptions {
 /**
  * Command handler function type
  */
-export type CommandHandler = CommandMiddleware<Context>;
+export type CommandHandler = (ctx: Context<Update>) => Promise<void>;
 
 /**
  * Middleware handler function type
  */
-export type MiddlewareHandler = Middleware<Context>;
+export type MiddlewareHandler = Middleware<Context<Update>>;
 
 /**
  * GwKang options
  */
 export interface GwKangOptions {
   setMyCommands?: boolean;
-  bot?: BotConfig<Context>;
+  bot?: Partial<Telegraf.Options<Context<Update>>>;
 }

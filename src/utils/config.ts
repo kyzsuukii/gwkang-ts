@@ -1,15 +1,9 @@
-import 'dotenv/config';
-
-export interface Env {
-  BOT_TOKEN: string;
-  MONGODB_URI: string;
-  RATE_LIMIT?: string;
-  RATE_LIMIT_WINDOW?: string;
-}
+import { getEnv } from './env';
 
 export const config = {
-  BOT_TOKEN: process.env.BOT_TOKEN,
-  MONGODB_URI: process.env.MONGODB_URI,
-  RATE_LIMIT: process.env.RATE_LIMIT || '5',
-  RATE_LIMIT_WINDOW: process.env.RATE_LIMIT_WINDOW || '10s',
+  BOT_TOKEN: getEnv('BOT_TOKEN', true),
+  MONGODB_URI: getEnv('MONGODB_URI', true),
+  RATE_LIMIT: getEnv('RATE_LIMIT', false, '5'),
+  RATE_LIMIT_WINDOW: getEnv('RATE_LIMIT_WINDOW', false, '10s'),
+  HTTPS_PROXY: getEnv('HTTPS_PROXY', false),
 } as const;
