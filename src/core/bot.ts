@@ -1,4 +1,4 @@
-import { Bot, BotError, Context } from 'grammy';
+import { Bot, Context } from 'grammy';
 import { config } from '../utils/config';
 import { Database } from './database';
 import { middlewares, commands } from '../registry';
@@ -13,8 +13,7 @@ export class GwKang {
 
   constructor(options: GwKangOptions = {}) {
     this.options = options;
-    this.validateConfig();
-    this.bot = new Bot<Context>(config.BOT_TOKEN as string, options.bot);
+    this.bot = new Bot<Context>(config.BOT_TOKEN, options.bot);
     this.db = Database.getInstance();
   }
 
