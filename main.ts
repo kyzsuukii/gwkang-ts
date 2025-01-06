@@ -1,26 +1,61 @@
-import { GwKang } from './src/core';
+import { Bot, Context } from 'grammy';
+import { Database, GwKang } from './src/core';
 import { logger } from './src/utils/logger';
 
-const main = async () => {
+let bot: Bot<Context>;
+
+const shutdown = async (): Promise<void> => {
+  try {
+    if (bot.isRunning()) {
+      logger.info('Shutting down bot...');
+      await bot.stop();
+      Database.getInstance().getClient().close();
+    }
+  } catch (e) {
+    logger.error(`Error during shutdown: ${e instanceof Error ? e.message : e}`);
+  } finally {
+    process.exit(1);
+  }
+};
+
+const initializeBot = async (): Promise<Bot<Context>> => {
   const gwKang = new GwKang({
-    /**
-     * Set to false if you encounter "Network request for 'setMyCommands' failed" error.
-     * Note: This will disable bot command autocompletion on typing slash (/) in Telegram.
-     */
     setMyCommands: true,
     bot: {
-      // grammy bot options
+      client: {
+        timeoutSeconds: 10,
+      },
     },
   });
   logger.info('Initializing GwKang bot...');
-  const bot = await gwKang.initialize();
+  return await gwKang.initialize();
+};
 
+const startBot = async (bot: Bot<Context>): Promise<void> => {
   logger.info('Starting GwKang bot...');
   await bot.start({
-    onStart: () => {
-      logger.info('Bot started successfully');
-    },
+    onStart: () => logger.info('Bot started'),
+    drop_pending_updates: true,
+    allowed_updates: ['message', 'callback_query'],
   });
+
+  bot.catch(err => {
+    logger.error(`Bot error: ${err instanceof Error ? err.message : err}`);
+    shutdown();
+  });
+};
+
+const main = async () => {
+  try {
+    bot = await initializeBot();
+    await startBot(bot);
+  } catch (e) {
+    logger.error(`Error during initialization: ${e instanceof Error ? e.message : e}`);
+    await shutdown();
+  }
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 };
 
 main();

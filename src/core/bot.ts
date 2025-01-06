@@ -1,4 +1,4 @@
-import { Bot, Context } from 'grammy';
+import { Bot, BotError, Context } from 'grammy';
 import { config } from '../utils/config';
 import { Database } from './database';
 import { middlewares, commands } from '../registry';
@@ -16,24 +16,25 @@ export class GwKang {
     this.validateConfig();
     this.bot = new Bot<Context>(config.BOT_TOKEN as string, options.bot);
     this.db = Database.getInstance();
-    this.setupErrorHandler();
-  }
-
-  private setupErrorHandler(): void {
-    this.bot.catch(err => {
-      logger.error('Telegram bot error:', err instanceof Error ? err.message : String(err));
-    });
   }
 
   private async setupCommands(): Promise<void> {
     if (this.options.setMyCommands) {
-      await this.bot.api.setMyCommands(
-        commands.map(cmd => ({
-          command: cmd.name,
-          description: cmd.description,
-        }))
-      );
-      logger.info('Successfully registered bot commands with Telegram API');
+      try {
+        await this.bot.api.setMyCommands(
+          commands.map(cmd => ({
+            command: cmd.name,
+            description: cmd.description,
+          }))
+        );
+        logger.info('Successfully registered bot commands with Telegram API');
+      } catch (error) {
+        logger.warn(
+          'Failed to register bot commands with Telegram API. auto-completion will not work'
+        );
+
+        // continue even if the command registration fails
+      }
     }
   }
 
@@ -52,7 +53,7 @@ export class GwKang {
     await this.initializeDatabase();
     await this.setupMiddlewares();
     await this.setupCommands();
-    logger.info('Bot initialization completed - ready to handle updates');
+    logger.info('Bot initialization completed. waiting until bot is started...');
     return this.bot;
   }
 
