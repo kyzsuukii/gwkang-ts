@@ -3,13 +3,11 @@ import { logger } from './src/utils/logger';
 
 const main = async () => {
   const gwKang = new GwKang({
-    /**
-     * Set to false if you encounter "Network request for 'setMyCommands' failed" error.
-     * Note: This will disable bot command autocompletion on typing slash (/) in Telegram.
-     */
     setMyCommands: true,
     bot: {
-      // grammy bot options
+      client: {
+        timeoutSeconds: 10,
+      },
     },
   });
   logger.info('Initializing GwKang bot...');
@@ -17,9 +15,9 @@ const main = async () => {
 
   logger.info('Starting GwKang bot...');
   await bot.start({
-    onStart: () => {
-      logger.info('Bot started successfully');
-    },
+    onStart: () => logger.info('Bot started'),
+    drop_pending_updates: true,
+    allowed_updates: ['message', 'callback_query'],
   });
 };
 
