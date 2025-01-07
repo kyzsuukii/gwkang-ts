@@ -5,11 +5,6 @@ const main = async () => {
   logger.info('Initializing GwKang bot...');
   const bot = await createBot({
     setMyCommands: true,
-    bot: {
-      client: {
-        timeoutSeconds: 10,
-      },
-    },
   });
 
   logger.info('Starting GwKang bot...');
