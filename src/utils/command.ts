@@ -1,18 +1,25 @@
-import { Bot, Context } from 'grammy';
-import { CommandOptions, CommandHandler } from '../core';
+import { Bot } from 'grammy';
+import { CommandOptions, CommandHandler, Context, CommandMetadata } from '../core/types';
 
-export class Command {
-  constructor(
-    public name: string,
-    public description: string,
-    public handler: CommandHandler
-  ) {}
+const commands = new Map<string, CommandMetadata>();
 
-  static create(options: CommandOptions, handler: CommandHandler): Command {
-    return new Command(options.name, options.description, handler);
+export function createCommand(options: CommandOptions, handler: CommandHandler): CommandHandler {
+  const metadata: CommandMetadata = {
+    name: options.name,
+    description: options.description,
+    handler,
+  };
+
+  commands.set(options.name, metadata);
+  return handler;
+}
+
+export function registerCommands(bot: Bot<Context>): void {
+  for (const [name, metadata] of commands) {
+    bot.command(name, ctx => metadata.handler(ctx));
   }
+}
 
-  register(bot: Bot<Context>) {
-    bot.command(this.name, this.handler);
-  }
+export function getCommands(): Map<string, CommandMetadata> {
+  return commands;
 }

@@ -1,6 +1,6 @@
-import { Command } from '../utils/command';
+import { createCommand } from '../utils/command';
 
-export const pingCommand = Command.create(
+const ping = createCommand(
   {
     name: 'ping',
     description: 'Check if bot is alive',
@@ -12,3 +12,5 @@ export const pingCommand = Command.create(
     await ctx.reply(`Pong! Response time: ${end - start}ms`);
   }
 );
+
+export default ping;
