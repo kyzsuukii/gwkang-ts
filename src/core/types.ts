@@ -1,11 +1,13 @@
-import { Context, Middleware, CommandMiddleware, BotConfig } from 'grammy';
+import { Context as BaseContext, Middleware, BotConfig, CommandContext } from 'grammy';
+import { Connection, Document } from 'mongoose';
 
 /**
- * Generic configuration type that enforces string or undefined values
+ * Base model interface for all database models
  */
-export type Config<T> = {
-  [K in keyof T]: string | undefined;
-};
+export interface BaseModel extends Document {
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 /**
  * Command configuration options
@@ -16,14 +18,39 @@ export interface CommandOptions {
 }
 
 /**
+ * Command metadata interface
+ */
+export interface CommandMetadata {
+  name: string;
+  description: string;
+  handler: CommandHandler;
+}
+
+/**
+ * GwKang Context interface
+ */
+export interface GwContext {
+  db: Connection;
+}
+
+/**
+ * Extended Context type with GwKang features
+ */
+export type Context = BaseContext & GwContext;
+
+/**
  * Command handler function type
  */
-export type CommandHandler = CommandMiddleware<Context>;
+export type CommandHandler = (ctx: CommandContext<Context>) => Promise<void> | void;
 
 /**
  * Middleware handler function type
  */
 export type MiddlewareHandler = Middleware<Context>;
+
+/**
+ * Bot client configuration
+ */
 
 /**
  * GwKang options

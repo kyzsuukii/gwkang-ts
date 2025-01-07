@@ -4,7 +4,7 @@ import { config } from '../utils/config';
 
 const rateLimits = new Map<string, { count: number; resetTime: number }>();
 
-export const rateLimit: MiddlewareHandler = (): MiddlewareHandler => async (ctx, next) => {
+const rateLimit: MiddlewareHandler = async (ctx, next) => {
   const userId = ctx.from?.id;
   const chatId = ctx.chat?.id;
 
@@ -36,3 +36,5 @@ export const rateLimit: MiddlewareHandler = (): MiddlewareHandler => async (ctx,
 
   return next();
 };
+
+export default rateLimit;

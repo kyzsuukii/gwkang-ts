@@ -1,8 +1,9 @@
-import { GwKang } from './src/core';
+import { createBot } from './src/core/bot';
 import { logger } from './src/utils/logger';
 
 const main = async () => {
-  const gwKang = new GwKang({
+  logger.info('Initializing GwKang bot...');
+  const bot = await createBot({
     setMyCommands: true,
     bot: {
       client: {
@@ -10,8 +11,6 @@ const main = async () => {
       },
     },
   });
-  logger.info('Initializing GwKang bot...');
-  const bot = await gwKang.initialize();
 
   logger.info('Starting GwKang bot...');
   await bot.start({

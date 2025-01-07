@@ -1,71 +1,49 @@
-import { Bot, Context } from 'grammy';
+import { Bot } from 'grammy';
 import { config } from '../utils/config';
-import { Database } from './database';
-import { middlewares, commands } from '../registry';
-import { getEmptyKeys } from '../utils/validation';
+import { connectDatabase } from './database';
+import { middlewares } from '../registry';
 import { logger } from '../utils/logger';
-import { GwKangOptions } from './types';
+import { GwKangOptions, Context } from './types';
+import { getCommands, registerCommands } from '../utils/command';
 
-export class GwKang {
-  private bot: Bot<Context>;
-  private db: Database;
-  private options: GwKangOptions;
-
-  constructor(options: GwKangOptions = {}) {
-    this.options = options;
-    this.bot = new Bot<Context>(config.BOT_TOKEN, options.bot);
-    this.db = Database.getInstance();
-  }
-
-  private async setupCommands(): Promise<void> {
-    if (this.options.setMyCommands) {
-      try {
-        await this.bot.api.setMyCommands(
-          commands.map(cmd => ({
-            command: cmd.name,
-            description: cmd.description,
-          }))
-        );
-        logger.info('Successfully registered bot commands with Telegram API');
-      } catch (error) {
-        logger.warn(
-          'Failed to register bot commands with Telegram API. auto-completion will not work'
-        );
-
-        // continue even if the command registration fails
-      }
+async function setupCommands(bot: Bot<Context>, options: GwKangOptions): Promise<void> {
+  if (options.setMyCommands) {
+    try {
+      const commands = Array.from(getCommands().values());
+      await bot.api.setMyCommands(
+        commands.map(cmd => ({
+          command: cmd.name,
+          description: cmd.description,
+        }))
+      );
+      logger.info('Successfully registered bot commands with Telegram API');
+    } catch (error) {
+      logger.warn(
+        'Failed to register bot commands with Telegram API. auto-completion will not work'
+      );
     }
   }
+}
 
-  private async setupMiddlewares(): Promise<void> {
-    commands.forEach(command => command.register(this.bot));
-    middlewares.forEach(middleware => this.bot.use(middleware));
-    logger.info('Successfully registered all command handlers and middlewares');
-  }
+async function setupMiddlewares(bot: Bot<Context>): Promise<void> {
+  registerCommands(bot);
+  middlewares.forEach(middleware => bot.use(middleware));
+  logger.info('Successfully registered all command handlers and middlewares');
+}
 
-  private async initializeDatabase(): Promise<void> {
-    await this.db.connect();
-    logger.info('Successfully established database connection');
-  }
+async function initializeDatabase(bot: Bot<Context>): Promise<void> {
+  const db = await connectDatabase();
+  bot.use(db.middleware);
+  logger.info('Successfully established database connection');
+}
 
-  async initialize(): Promise<Bot<Context>> {
-    await this.initializeDatabase();
-    await this.setupMiddlewares();
-    await this.setupCommands();
-    logger.info('Bot initialization completed. waiting until bot is started...');
-    return this.bot;
-  }
+export async function createBot(options: GwKangOptions = {}): Promise<Bot<Context>> {
+  const bot = new Bot<Context>(config.BOT_TOKEN, options.bot);
 
-  private validateConfig(): void {
-    const emptyKeys = getEmptyKeys(config);
-    if (emptyKeys.length > 0) {
-      const error = `Required environment variables missing: ${emptyKeys.join(', ')}`;
-      logger.error(error);
-      throw new Error(error);
-    }
-  }
+  await initializeDatabase(bot);
+  await setupCommands(bot, options);
+  await setupMiddlewares(bot);
 
-  getDatabase(): Database {
-    return this.db;
-  }
+  logger.info('Bot initialization completed. waiting until bot is started...');
+  return bot;
 }

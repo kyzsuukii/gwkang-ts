@@ -1,35 +1,42 @@
 import mongoose from 'mongoose';
 import { config } from '../utils/config';
 import { logger } from '../utils/logger';
+import { Context } from './types';
+import { Middleware } from 'grammy';
+import { models } from '../registry';
 
-export class Database {
-  private static instance: Database;
-  private client: mongoose.Connection;
+interface Database {
+  client: mongoose.Connection;
+  middleware: Middleware<Context>;
+}
 
-  private constructor() {
-    this.client = mongoose.connection;
-  }
+let dbInstance: Database | null = null;
 
-  static getInstance(): Database {
-    if (!Database.instance) {
-      Database.instance = new Database();
+export async function connectDatabase(): Promise<Database> {
+  if (dbInstance) return dbInstance;
+
+  await mongoose.connect(config.MONGODB_URI).catch(err => {
+    logger.error(err);
+    process.exit(1);
+  });
+
+  // Register all models
+  models.forEach(model => {
+    const modelName = model.modelName;
+    if (!mongoose.models[modelName]) {
+      mongoose.model(modelName, model.schema);
     }
-    return Database.instance;
-  }
+  });
 
-  async connect(): Promise<void> {
-    await mongoose
-      .connect(config.MONGODB_URI)
-      .catch(err => {
-        logger.error(err);
-        process.exit(1);
-      })
-      .finally(() => {
-        logger.info('Connected to MongoDB');
-      });
-  }
+  logger.info('Connected to MongoDB and registered all models');
 
-  getClient(): mongoose.Connection {
-    return this.client;
-  }
+  dbInstance = {
+    client: mongoose.connection,
+    middleware: async (ctx: Context, next) => {
+      ctx.db = mongoose.connection;
+      await next();
+    },
+  };
+
+  return dbInstance;
 }
