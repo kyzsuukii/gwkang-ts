@@ -1,4 +1,5 @@
 import { CommandContext, Context } from 'grammy';
+import path from 'path';
 
 export interface IStickerpackData {
   stickerTitle: string;
@@ -47,5 +48,12 @@ export class BotHelpers extends String {
     }
 
     return data;
+  }
+
+  public static genRandomFileName(str: string): string {
+    let ext:string = path.extname(str);
+    let random: string = (Math.random() + 1).toString(36).substring(7)
+
+    return `${random}${ext}`
   }
 }
