@@ -16,7 +16,7 @@ export const commands: CommandHandler[] = [
   ping,
   start,
   kangCommand,
-  debugCommand
+  debugCommand,
   // Add more commands here
 ];
 

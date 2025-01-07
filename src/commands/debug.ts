@@ -10,14 +10,13 @@ const debugCommand = createCommand(
     let jsonStr: any = JSON.stringify(ctx.message, null, 4);
 
     let replyparam: ReplyParameters = {
-      message_id: ctx.message?.message_id!
-    }
-    
+      message_id: ctx.message?.message_id!,
+    };
+
     await ctx.reply(jsonStr, {
-      reply_parameters: replyparam
-    })
+      reply_parameters: replyparam,
+    });
   }
 );
 
-
-export default debugCommand
+export default debugCommand;
