@@ -219,15 +219,15 @@ const kangCommand = createCommand(
         description: 'Kanging other user sticker',
     }
     , async ctx => {
-        if (ctx.message?.reply_to_message == undefined) {
+        if (ctx.message?.reply_to_message == undefined ) {
             await invalidInput(ctx)
         } else {
             if (ctx.message?.reply_to_message?.sticker! != undefined && ctx.message?.reply_to_message?.photo == undefined) {
                 await kangFromSticker(ctx);
-            }
-
-            if (ctx.message?.reply_to_message?.photo != undefined && ctx.message?.reply_to_message?.sticker == undefined) {
+            } else if (ctx.message?.reply_to_message?.photo != undefined && ctx.message?.reply_to_message?.sticker == undefined) {
                 await kangFromImage(ctx)
+            } else {
+                await invalidInput(ctx)
             }
         }
     }
