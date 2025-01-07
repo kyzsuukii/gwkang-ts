@@ -6,6 +6,8 @@ import debugCommand from './commands/debug';
 import { MiddlewareHandler, CommandHandler } from './core/types';
 import { model } from 'mongoose';
 import { UserSchema } from './models/user';
+import ungkangCommand from './commands/ungkang';
+import toImageCommand from './commands/toimage';
 
 export const middlewares: MiddlewareHandler[] = [
   rateLimit,
@@ -17,6 +19,8 @@ export const commands: CommandHandler[] = [
   start,
   kangCommand,
   debugCommand,
+  toImageCommand,
+  ungkangCommand,
   // Add more commands here
 ];
 
