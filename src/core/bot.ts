@@ -26,9 +26,8 @@ async function setupCommands(bot: Bot<Context>, options: GwKangOptions): Promise
 }
 
 async function setupMiddlewares(bot: Bot<Context>): Promise<void> {
-  registerCommands(bot);
   middlewares.forEach(middleware => bot.use(middleware));
-  logger.info('Successfully registered all command handlers and middlewares');
+  logger.info('Successfully registered rate limit and other middlewares');
 }
 
 async function initializeDatabase(bot: Bot<Context>): Promise<void> {
@@ -41,8 +40,10 @@ export async function createBot(options: GwKangOptions = {}): Promise<Bot<Contex
   const bot = new Bot<Context>(config.BOT_TOKEN, options.bot);
 
   await initializeDatabase(bot);
-  await setupCommands(bot, options);
   await setupMiddlewares(bot);
+  await setupCommands(bot, options);
+  registerCommands(bot);
+  logger.info('Successfully registered command handlers');
 
   logger.info('Bot initialization completed. waiting until bot is started...');
   return bot;

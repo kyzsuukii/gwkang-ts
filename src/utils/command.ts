@@ -1,5 +1,6 @@
 import { Bot } from 'grammy';
 import { CommandOptions, CommandHandler, Context, CommandMetadata } from '../core/types';
+import { logger } from './logger';
 
 const commands = new Map<string, CommandMetadata>();
 
@@ -14,10 +15,11 @@ export function createCommand(options: CommandOptions, handler: CommandHandler):
   return handler;
 }
 
-export function registerCommands(bot: Bot<Context>): void {
+export async function registerCommands(bot: Bot<Context>): Promise<void> {
   for (const [name, metadata] of commands) {
     bot.command(name, ctx => metadata.handler(ctx));
   }
+  logger.info('Successfully registered command handlers');
 }
 
 export function getCommands(): Map<string, CommandMetadata> {
