@@ -1,18 +1,23 @@
-import { Command } from '../utils/command';
-import { CommandContext, Context } from 'grammy';
+import { createCommand } from '../utils/command';
+import { ReplyParameters } from 'grammy/types';
 
-export const debugCommand = Command.create(
+const debugCommand = createCommand(
   {
     name: 'debug',
     description: 'send the json',
   },
   async ctx => {
+    let jsonStr: any = JSON.stringify(ctx.message, null, 4);
 
-    /* repack the obj and remove the token */
-    let jsonObj: any = JSON.parse(JSON.stringify(ctx, null, 2));
-    jsonObj.api.token = "--"
+    let replyparam: ReplyParameters = {
+      message_id: ctx.message?.message_id!
+    }
     
-    let jsonStr: any = JSON.stringify(jsonObj, null, 2);
-    await ctx.reply(jsonStr)
+    await ctx.reply(jsonStr, {
+      reply_parameters: replyparam
+    })
   }
 );
+
+
+export default debugCommand

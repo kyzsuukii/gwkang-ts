@@ -1,4 +1,4 @@
-import { Command } from '../utils/command';
+import { createCommand } from '../utils/command';
 import { invalidInput } from '../helper/errors';
 import { stickerpackStateModel } from '../models/stickerpackState';
 import { CommandContext, Context } from 'grammy';
@@ -6,6 +6,7 @@ import { InputFile, InputSticker, Message } from 'grammy/types';
 import { BotHelpers, IStickerpackData } from '../helper/strings';
 import { downloadFileToTemp } from '../helper/io';
 import sharp from "sharp";
+import { ReplyParameters } from 'grammy/types';
 
 const createNewStickerpack = async (ctx: CommandContext<Context>, stickerFileId: string): Promise<IStickerpackData | null> => {
     let stickerData: IStickerpackData = await BotHelpers.genRandomStickerpackName(ctx);
@@ -52,6 +53,11 @@ const addStickerPack = async (ctx: CommandContext<Context>, prevName: string, st
 
 
 const kangFromSticker = async (ctx: CommandContext<Context>): Promise<void> => {
+    /* setup reply id */
+    let replyparam: ReplyParameters = {
+        message_id: ctx.message?.message_id!
+    }
+
     /* 
       find current used sticker
     */
@@ -68,7 +74,8 @@ const kangFromSticker = async (ctx: CommandContext<Context>): Promise<void> => {
 
         if (ret != null) {
             await ctx.reply(`Sticker pack created and <a href='https://t.me/addstickers/${ret.stickerName}'>Kanged!</a>`, {
-                parse_mode: "HTML"
+                parse_mode: "HTML",
+                reply_parameters: replyparam
             })
 
             /* done with sticker, now insert previous created sticker to the db */
@@ -79,21 +86,26 @@ const kangFromSticker = async (ctx: CommandContext<Context>): Promise<void> => {
 
             await doc.save()
         } else {
-            await ctx.reply("kang failed")
+            await ctx.reply("kang failed", {
+                reply_parameters: replyparam
+            })
         }
 
     } else {
         /* previous data is found */
 
-        let ret: boolean = await addStickerPack(ctx, 
-            StickerpackStateDoc.current, 
+        let ret: boolean = await addStickerPack(ctx,
+            StickerpackStateDoc.current,
             ctx.message?.reply_to_message?.sticker?.file_id!
         );
 
         if (!ret) {
-            await ctx.reply("kang failed")
+            await ctx.reply("kang failed", {
+                reply_parameters: replyparam
+            })
         } else {
             await ctx.reply(`New sticker <a href='https://t.me/addstickers/${StickerpackStateDoc.current}'>Kanged!</a>`, {
+                reply_parameters: replyparam,
                 parse_mode: "HTML"
             })
         }
@@ -125,13 +137,18 @@ const processImage = async (fileName: string): Promise<string> => {
     let outImage: string = `/tmp/${BotHelpers.genRandomFileName(fileName)}`;
 
     await sharp(fileName)
-      .resize(new_width, new_height)
-      .toFile(outImage);
+        .resize(new_width, new_height)
+        .toFile(outImage);
 
     return outImage
 }
 
 const kangFromImage = async (ctx: CommandContext<Context>): Promise<void> => {
+    /* setup reply id */
+    let replyparam: ReplyParameters = {
+        message_id: ctx.message?.message_id!
+    }
+
     /* send sticker first */
 
     const largestphoto = await ctx.message?.reply_to_message?.photo?.pop()
@@ -150,8 +167,6 @@ const kangFromImage = async (ctx: CommandContext<Context>): Promise<void> => {
         new InputFile(resizedImage)
     )
 
-
-
     const StickerpackStateDoc = await stickerpackStateModel.findOne({
         user_id: ctx.message?.from.id!
     })
@@ -164,7 +179,8 @@ const kangFromImage = async (ctx: CommandContext<Context>): Promise<void> => {
 
         if (ret != null) {
             await ctx.reply(`Sticker pack created and <a href='https://t.me/addstickers/${ret.stickerName}'>Kanged!</a>`, {
-                parse_mode: "HTML"
+                parse_mode: "HTML",
+                reply_parameters: replyparam,
             })
 
             /* done with sticker, now insert previous created sticker to the db */
@@ -175,7 +191,9 @@ const kangFromImage = async (ctx: CommandContext<Context>): Promise<void> => {
 
             await doc.save()
         } else {
-            await ctx.reply("kang failed")
+            await ctx.reply("kang failed", {
+                reply_parameters: replyparam,
+            })
         }
     } else {
         /* previous data is found */
@@ -188,31 +206,32 @@ const kangFromImage = async (ctx: CommandContext<Context>): Promise<void> => {
             await ctx.reply("kang failed")
         } else {
             await ctx.reply(`New sticker <a href='https://t.me/addstickers/${StickerpackStateDoc.current}'>Kanged!</a>`, {
-                parse_mode: "HTML"
+                parse_mode: "HTML",
+                reply_parameters: replyparam,
             })
         }
     }
 }
 
-export const kangCommand = Command.create(
+const kangCommand = createCommand(
     {
         name: 'kang',
         description: 'Kanging other user sticker',
-    },
-    async ctx => {
-
+    }
+    , async ctx => {
         if (ctx.message?.reply_to_message == undefined) {
             await invalidInput(ctx)
-            return 0; /* exit now */
-        }
+        } else {
+            if (ctx.message?.reply_to_message?.sticker! != undefined && ctx.message?.reply_to_message?.photo == undefined) {
+                await kangFromSticker(ctx);
+            }
 
-        if (ctx.message.reply_to_message.sticker != undefined && ctx.message.reply_to_message.photo == undefined) {
-            await kangFromSticker(ctx);
+            if (ctx.message?.reply_to_message?.photo != undefined && ctx.message?.reply_to_message?.sticker == undefined) {
+                await kangFromImage(ctx)
+            }
         }
-
-        if (ctx.message.reply_to_message.photo != undefined && ctx.message.reply_to_message.sticker == undefined) {
-            await kangFromImage(ctx)
-        }
-       
     }
 );
+
+
+export default kangCommand
