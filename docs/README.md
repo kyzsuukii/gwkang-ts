@@ -1,177 +1,196 @@
-# GwKang Bot Documentation
+# Quick Start Guide
 
 ## Table of Contents
-- [Registering Commands and Middlewares](#registering-commands-and-middlewares)
-- [Creating a Middleware](#creating-a-middleware)
-- [Creating Commands](#creating-commands)
-  - [Simple Command](#simple-command)
-  - [Database Command](#database-command)
-  - [Command with Subcommands](#command-with-subcommands)
-- [Database Usage](#database-usage)
-  - [Creating Models](#creating-models)
+- [Quick Start Guide](#quick-start-guide)
+  - [Table of Contents](#table-of-contents)
+  - [Bot Initialization](#bot-initialization)
+  - [Registering Commands and Middlewares](#registering-commands-and-middlewares)
+  - [Creating Commands](#creating-commands)
+    - [Simple Command](#simple-command)
+    - [Database Command](#database-command)
+  - [Models](#models)
+    - [User Model](#user-model)
+    - [Creating Models](#creating-models)
   - [Database Operations](#database-operations)
+
+## Bot Initialization
+Initialize the bot with the following configuration:
+```typescript
+import { createBot } from './src/core/bot';
+
+const main = async () => {
+  const bot = await createBot({
+    setMyCommands: true,
+    bot: {
+      client: {
+        // Bot client options
+      },
+    },
+  });
+
+  await bot.start({
+    // Start options
+  });
+};
+```
 
 ## Registering Commands and Middlewares
 Add your commands and middlewares to the registry:
 ```typescript
-// Register middlewares and commands in registry.ts
+// Register middlewares, commands and models in registry.ts
 export const middlewares = [
   rateLimit,
   // Add more middlewares here
 ];
 
 export const commands = [
-  startCommand,
-  pingCommand,
+  ping,
+  start,
   // Add more commands here
+];
+
+export const models = [
+  model('User', UserSchema),
+  // Add more models here
 ];
 ```
 
-## Creating a Middleware
-Example of creating a rate limit middleware:
-```typescript
-// Simple rate limit middleware
-export function rateLimit() {
-  const requests = new Map<number, number>();
-  
-  return async (ctx, next) => {
-    const userId = ctx.from?.id;
-    if (!userId) return next();
-
-    const now = Date.now();
-    const lastRequest = requests.get(userId) || 0;
-    
-    if (now - lastRequest < 1000) {
-      return ctx.reply('Please wait before sending another command');
-    }
-    
-    requests.set(userId, now);
-    return next();
-  };
-}
-```
-
 ## Creating Commands
+Commands are created using the `createCommand` function:
 
 ### Simple Command
 Basic command without any special handling:
 ```typescript
-export const pingCommand = Command.create(
+import { createCommand } from '../utils/command';
+
+const ping = createCommand(
   {
     name: 'ping',
     description: 'Check bot status',
   },
   async ctx => {
-    await ctx.reply('Pong!');
+    const start = Date.now();
+    await ctx.reply('Calculating ping...');
+    const end = Date.now();
+    await ctx.reply(`Pong! Response time: ${end - start}ms`);
   }
 );
+
+export default ping;
 ```
 
 ### Database Command
 Command that interacts with the database:
 ```typescript
-export const noteCommand = Command.create(
+const start = createCommand(
   {
-    name: 'note',
-    description: 'Save a note',
+    name: 'start',
+    description: 'Start the bot',
   },
   async ctx => {
-    const text = ctx.message.text.split(' ').slice(1).join(' ');
-    if (!text) return ctx.reply('Usage: /note <your note>');
-
     try {
-      const note = new Note({
-        userId: ctx.from.id,
-        content: text,
-      });
-      await note.save();
-      await ctx.reply('Note saved!');
-    } catch (error) {
-      logger.error('Failed to save note:', error);
-      await ctx.reply('Failed to save note');
-    }
-  }
-);
-```
+      if (!ctx.from) {
+        await ctx.reply('Error: Could not identify user');
+        return;
+      }
 
-### Command with Subcommands
-Command that handles multiple subcommands:
-```typescript
-export const settingsCommand = Command.create(
-  {
-    name: 'settings',
-    description: 'Manage settings',
-  },
-  async ctx => {
-    const [subcommand, ...args] = ctx.message.text.split(' ').slice(1);
-    
-    try {
-      switch (subcommand) {
-        case 'view': {
-          const settings = await Settings.findOne({ userId: ctx.from.id });
-          if (!settings) return ctx.reply('No settings found');
-          await ctx.reply(JSON.stringify(settings, null, 2));
-          break;
-        }
-        case 'set': {
-          const [key, value] = args;
-          if (!key || !value) return ctx.reply('Usage: /settings set <key> <value>');
-          
-          await Settings.updateOne(
-            { userId: ctx.from.id },
-            { $set: { [key]: value } },
-            { upsert: true }
-          );
-          await ctx.reply('Settings updated!');
-          break;
-        }
-        default:
-          await ctx.reply(
-            '/settings view - View settings\n' +
-            '/settings set <key> <value> - Update setting'
-          );
+      const User = ctx.db.model<IUser>('User');
+      const user = await User.findOne({ userId: ctx.from.id });
+      
+      if (!user) {
+        await User.create({
+          userId: ctx.from.id,
+          username: ctx.from.username || undefined,
+          firstName: ctx.from.first_name || undefined,
+          lastName: ctx.from.last_name || undefined,
+        });
+        await ctx.reply('Welcome to the bot!');
+      } else {
+        await ctx.reply('Welcome back!');
       }
     } catch (error) {
-      logger.error('Settings command error:', error);
-      await ctx.reply('Failed to process settings command');
+      console.error('Error in start command:', error);
+      await ctx.reply('An error occurred');
     }
   }
 );
 ```
 
-## Database Usage
+## Models
 
-### Creating Models
-Example of creating a database model:
+### User Model
+The built-in User model for tracking bot users:
 ```typescript
-const noteSchema = new Schema({
-  userId: { type: Number, required: true, index: true },
-  content: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now }
-});
+interface IUser extends Document {
+  userId: number;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-export const Note = model('Note', noteSchema);
+const UserSchema = new Schema(
+  {
+    userId: {
+      type: Number,
+      required: true,
+      unique: true,
+    },
+    username: {
+      type: String,
+      required: false,
+    },
+    firstName: {
+      type: String,
+      required: false,
+    },
+    lastName: {
+      type: String,
+      required: false,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 ```
 
-### Database Operations
-Common database operations:
+### Creating Models
+Example of creating a custom model:
+```typescript
+const customSchema = new Schema({
+  field: { type: String, required: true },
+  // Add more fields
+}, {
+  timestamps: true
+});
+
+// Register in registry.ts
+export const models = [
+  model('Custom', customSchema),
+  // Other models
+];
+```
+
+## Database Operations
+Common database operations using Mongoose:
 ```typescript
 // Create
-const doc = new YourModel({ field1: value1 });
-await doc.save();
+const doc = await Model.create({ field: value });
 
 // Read
-const docs = await YourModel.find({ field: value });
-const doc = await YourModel.findOne({ field: value });
+const docs = await Model.find({ field: value });
+const doc = await Model.findOne({ field: value });
 
 // Update
-await YourModel.updateOne(
+await Model.updateOne(
   { field: value },
   { $set: { updatedField: newValue } }
 );
 
 // Delete
-await YourModel.deleteOne({ field: value });
+await Model.deleteOne({ field: value });
 
 // Pagination
 const docs = await Model.find()
